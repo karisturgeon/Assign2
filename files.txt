@@ -1,0 +1,2 @@
+server src/server.c include/server.h src/process_request.c include/process_request.h include/lower_filter.h src/lower_filter.c include/upper_filter.h src/upper_filter.c include/null_filter.h src/null_filter.c
+client src/client.c include/client.h include/parse_args.h src/parse_args.c
