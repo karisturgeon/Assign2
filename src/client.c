@@ -89,6 +89,11 @@ int client(int argc, char *argv[])
         }
         else
         {
+            if(strcmp(word, "Server is shutting down...\n") == 0)
+            {
+                printf("%sServer has shut down. Exiting...\n", word);
+                goto cleanup;
+            }
             word[size] = '\0';
             printf("Returned message: %s\n", word);
         }

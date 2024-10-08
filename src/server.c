@@ -23,7 +23,7 @@ int main(void)
 noreturn int server(void)
 {
     pthread_t        thread;
-    const int        signals_to_handle[] = {SIGINT, SIGTERM};
+    const int        signals_to_handle[] = {SIGINT};
     struct sigaction sa;
 #if defined(__clang__)
     #pragma clang diagnostic push
@@ -89,4 +89,16 @@ noreturn int server(void)
         pthread_detach(thread);
     }
     exit(EXIT_FAILURE);
+}
+
+void signal_handler(int signal_number)
+{
+    if(signal_number == SIGINT)
+    {
+        printf("Server: Terminating...\n");
+
+        unlink(FIFO_FILE);
+        unlink(FIFO_FILE2);
+        exit(EXIT_SUCCESS);
+    }
 }

@@ -12,15 +12,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-void signal_handler(int signal_number)
-{
-    if(signal_number == SIGINT)
-    {
-        printf("Server: Terminating...\n");
-        exit(EXIT_SUCCESS);
-    }
-}
-
 _Noreturn void *process_request(void *arg)
 {
     client_data_t *client_data = (client_data_t *)arg;
