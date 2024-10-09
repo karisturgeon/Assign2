@@ -45,22 +45,15 @@ int parse_args(int argc, char *argv[], const char **input_message, const char **
         fprintf(stderr, "Error: Missing required arguments.\n");
         return EXIT_FAILURE;
     }
-    handle_arguments(argv[0], *input_message, *filter);
+
+    if(strcmp(*filter, "upper") != 0 && strcmp(*filter, "lower") != 0 && strcmp(*filter, "null") != 0)
+    {
+        fprintf(stderr, "Error: Invalid filter value '%s'. Excepted 'upper', 'lower', or 'null'\n", *filter);
+        usage(argv[0], EXIT_FAILURE, NULL);
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
-}
-
-void handle_arguments(const char *binary_name, const char *input_message, const char *filter)
-{
-    // Check if any required argument is missing
-    if(input_message == NULL)
-    {
-        usage(binary_name, EXIT_FAILURE, "Missing required argument: -i input message.");
-    }
-    if(filter == NULL)
-    {
-        usage(binary_name, EXIT_FAILURE, "Missing required argument: -f filter.");
-    }
 }
 
 _Noreturn void usage(const char *program_name, int exit_code, const char *message)
@@ -74,7 +67,7 @@ _Noreturn void usage(const char *program_name, int exit_code, const char *messag
     fprintf(stderr, "Usage: %s -i inputMessage -f filter\n", program_name);
     fputs("Options:\n", stderr);
     fputs("  -h            Display this help message\n", stderr);
-    fputs("  -i <String>   Input message (required)\n", stderr);
+    fputs("  -i <String>   Input message (required: \"Hello World\")\n", stderr);
     fputs("  -f <filter>   Filter type (required: 'upper', 'lower', 'null')\n", stderr);
     exit(exit_code);
 }

@@ -11,7 +11,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define FIFO_FILE "./fifo"
+#define FIFO_FILE1 "./fifo1"
 #define FIFO_FILE2 "./fifo2"
 
 int main(void)
@@ -45,18 +45,18 @@ noreturn int server(void)
         }
     }
 
-    mkfifo(FIFO_FILE, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    mkfifo(FIFO_FILE1, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     mkfifo(FIFO_FILE2, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     while(1)
     {
-        int            fd;
+        int            fd1;
         int            fd2;
         client_data_t *client_data;
-        fd  = open(FIFO_FILE, O_RDONLY | O_CLOEXEC);
+        fd1 = open(FIFO_FILE1, O_RDONLY | O_CLOEXEC);
         fd2 = open(FIFO_FILE2, O_WRONLY | O_CLOEXEC);
 
-        if(fd == -1)
+        if(fd1 == -1)
         {
             perror("Server: Error opening FIFO1");
             exit(EXIT_FAILURE);
@@ -71,18 +71,18 @@ noreturn int server(void)
         if(client_data == NULL)
         {
             perror("Error allocating memory for client data");
-            close(fd);
+            close(fd1);
             close(fd2);
             continue;
         }
-        client_data->fd  = fd;
+        client_data->fd1 = fd1;
         client_data->fd2 = fd2;
 
         if(pthread_create(&thread, NULL, process_request, (void *)client_data) != 0)
         {
             perror("Error creating thread");
             free(client_data);
-            close(fd);
+            close(fd1);
             close(fd2);
             continue;
         }
@@ -97,7 +97,7 @@ void signal_handler(int signal_number)
     {
         printf("Server: Terminating...\n");
 
-        unlink(FIFO_FILE);
+        unlink(FIFO_FILE1);
         unlink(FIFO_FILE2);
         exit(EXIT_SUCCESS);
     }

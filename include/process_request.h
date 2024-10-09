@@ -6,7 +6,7 @@ void            signal_handler(int signal_number);
 
 typedef struct
 {
-    int fd;
+    int fd1;
     int fd2;
 } client_data_t;
 

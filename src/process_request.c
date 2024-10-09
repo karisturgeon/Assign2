@@ -15,20 +15,20 @@
 _Noreturn void *process_request(void *arg)
 {
     client_data_t *client_data = (client_data_t *)arg;
-    int            fd          = client_data->fd;
+    int            fd1         = client_data->fd1;
     int            fd2         = client_data->fd2;
 
     uint8_t size;
     uint8_t filter_size;
 
     // Read filter size
-    if(read(fd, &filter_size, sizeof(uint8_t)) > 0)
+    if(read(fd1, &filter_size, sizeof(uint8_t)) > 0)
     {
         char filter_name[UINT8_MAX + 1];
         void (*filter_func)(char *) = NULL;
 
         // Read filter name
-        if(read(fd, filter_name, filter_size) != filter_size)
+        if(read(fd1, filter_name, filter_size) != filter_size)
         {
             perror("Error reading filter name");
         }
@@ -57,12 +57,12 @@ _Noreturn void *process_request(void *arg)
             if(filter_func != NULL)
             {
                 // Read message size
-                if(read(fd, &size, sizeof(uint8_t)) > 0)
+                if(read(fd1, &size, sizeof(uint8_t)) > 0)
                 {
                     char word[UINT8_MAX + 1];
 
                     // Read the actual message
-                    if(read(fd, word, size) != size)
+                    if(read(fd1, word, size) != size)
                     {
                         perror("Error reading message");
                     }
@@ -91,7 +91,7 @@ _Noreturn void *process_request(void *arg)
         }
     }
 
-    close(fd);     // Close FIFO1 for this client
+    close(fd1);    // Close FIFO1 for this client
     close(fd2);    // Close FIFO2 for this client
 
     free(client_data);     // Free the allocated memory for client data

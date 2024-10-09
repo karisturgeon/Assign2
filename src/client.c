@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
 int client(int argc, char *argv[])
 {
-    int         fd;
+    int         fd1;
     int         fd2;
     uint8_t     size;
     const char *input_message = NULL;
@@ -40,10 +40,10 @@ int client(int argc, char *argv[])
     filter_size = (uint8_t)strlen(filter);
 
     // Open the FIFOs for writing
-    fd  = open(FIFO_FILE, O_WRONLY | O_CLOEXEC);
+    fd1 = open(FIFO_FILE, O_WRONLY | O_CLOEXEC);
     fd2 = open(FIFO_FILE2, O_RDONLY | O_CLOEXEC);
 
-    if(fd == -1)
+    if(fd1 == -1)
     {
         perror("Client: Error opening FIFO1");
         goto cleanup;
@@ -54,12 +54,12 @@ int client(int argc, char *argv[])
         goto cleanup;
     }
 
-    if(write(fd, &filter_size, sizeof(uint8_t)) != sizeof(uint8_t))
+    if(write(fd1, &filter_size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
         perror("Error writing filter size to FIFO");
         goto cleanup;
     }
-    if(write(fd, filter, filter_size) != filter_size)
+    if(write(fd1, filter, filter_size) != filter_size)
     {
         perror("Error writing filter to FIFO");
         goto cleanup;
@@ -68,14 +68,14 @@ int client(int argc, char *argv[])
     size = (uint8_t)strlen(input_message);    // Size of the message (excluding null terminator)
 
     // Write the size of the message first
-    if(write(fd, &size, sizeof(uint8_t)) != sizeof(uint8_t))
+    if(write(fd1, &size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
         perror("Error writing size to FIFO");
         goto cleanup;
     }
 
     // Write the actual message to the FIFO
-    if(write(fd, input_message, size) != size)    // Write the exact message size without the null terminator
+    if(write(fd1, input_message, size) != size)    // Write the exact message size without the null terminator
     {
         perror("Error writing message to FIFO");
         goto cleanup;
@@ -99,9 +99,9 @@ int client(int argc, char *argv[])
         }
     }
 cleanup:
-    if(fd != -1)
+    if(fd1 != -1)
     {
-        close(fd);    // Close FIFO1 if it's open
+        close(fd1);    // Close FIFO1 if it's open
     }
     if(fd2 != -1)
     {
