@@ -9,7 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define FIFO_FILE "./fifo"
+#define FIFO_FILE1 "./fifo1"
 #define FIFO_FILE2 "./fifo2"
 
 int main(int argc, char *argv[])
@@ -40,7 +40,7 @@ int client(int argc, char *argv[])
     filter_size = (uint8_t)strlen(filter);
 
     // Open the FIFOs for writing
-    fd1 = open(FIFO_FILE, O_WRONLY | O_CLOEXEC);
+    fd1 = open(FIFO_FILE1, O_WRONLY | O_CLOEXEC);
     fd2 = open(FIFO_FILE2, O_RDONLY | O_CLOEXEC);
 
     if(fd1 == -1)

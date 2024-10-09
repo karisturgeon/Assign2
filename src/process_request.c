@@ -26,7 +26,7 @@ _Noreturn void *process_request(void *arg)
     {
         char filter_name[UINT8_MAX + 1];
         void (*filter_func)(char *) = NULL;
-
+        //        printf("reading from client.... \n");
         // Read filter name
         if(read(fd1, filter_name, filter_size) != filter_size)
         {
@@ -35,7 +35,7 @@ _Noreturn void *process_request(void *arg)
         else
         {
             filter_name[filter_size] = '\0';
-
+            //            printf("filter name: %s\n", filter_name);
             // Select the appropriate filter function
             if(strcmp(filter_name, "upper") == 0)
             {
@@ -69,13 +69,13 @@ _Noreturn void *process_request(void *arg)
                     else
                     {
                         word[size] = '\0';
-
+                        printf("Word: %s, Filter: %s\n", word, filter_name);
                         // Apply the filter function to each character
                         for(int i = 0; i < size; i++)
                         {
                             filter_func(&word[i]);
                         }
-
+                        printf("Transformed Word: %s\n", word);
                         // Send back the transformed message
                         if(write(fd2, &size, sizeof(uint8_t)) != sizeof(uint8_t) || write(fd2, word, size) != size)
                         {
