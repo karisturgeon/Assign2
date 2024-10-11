@@ -66,7 +66,11 @@ int client(int argc, char *argv[])
     }
     // Calculate the message size
     size = (uint8_t)strlen(input_message);    // Size of the message (excluding null terminator)
-
+    if(size == 0)
+    {
+        printf("Cannot have empty input_message\n");
+        goto cleanup;
+    }
     // Write the size of the message first
     if(write(fd1, &size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
@@ -95,7 +99,7 @@ int client(int argc, char *argv[])
                 goto cleanup;
             }
             word[size] = '\0';
-            printf("Returned message: %s\n", word);
+            printf("\n%s\n", word);
         }
     }
 cleanup:

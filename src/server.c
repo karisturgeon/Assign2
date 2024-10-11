@@ -59,12 +59,10 @@ noreturn void server(void)
         if(fd1 == -1)
         {
             perror("Server: Error opening FIFO1");
-            exit(EXIT_FAILURE);
         }
         if(fd2 == -1)
         {
             perror("Server: Error opening FIFO2");
-            exit(EXIT_FAILURE);
         }
 
         client_data = (client_data_t *)malloc(sizeof(client_data_t));
@@ -88,13 +86,15 @@ noreturn void server(void)
         }
         pthread_detach(thread);
     }
+    unlink(FIFO_FILE1);
+    unlink(FIFO_FILE2);
 }
 
 void signal_handler(int signal_number)
 {
     if(signal_number == SIGINT)
     {
-        printf("Server: Terminating...\n");
+        printf("\nServer: Terminating...\n");
         unlink(FIFO_FILE1);
         unlink(FIFO_FILE2);
         exit(EXIT_SUCCESS);

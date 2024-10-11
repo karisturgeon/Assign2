@@ -30,7 +30,7 @@ _Noreturn void *process_request(void *arg)
         // Read filter name
         if(read(fd1, filter_name, filter_size) != filter_size)
         {
-            perror("Error reading filter name");
+            printf("Error reading filter name");
         }
         else
         {
