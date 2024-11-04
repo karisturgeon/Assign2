@@ -40,7 +40,7 @@ int main(void)
     signal(SIGINT, signal_handler);
 
     // Create the server socket
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if(server_fd < 0)
     {
         perror("Socket creation failed");

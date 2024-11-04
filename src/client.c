@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -33,7 +34,7 @@ int main(int argc, char *argv[])
     }
 
     // Create a TCP socket
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    sock_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if(sock_fd < 0)
     {
         perror("Socket creation failed");
