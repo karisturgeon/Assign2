@@ -39,28 +39,17 @@ int main(void)
     signal(SIGINT, signal_handler);
 
     // Create the server socket
-
-    // server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    #if defined(__FreeBSD__)
+    server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    #else
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    #endif
     if(server_fd < 0)
     {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
-    flags = fcntl(server_fd, F_GETFD);
-    if(flags == -1)
-    {
-        perror("fcntl F_GETFD failed");
-        close(server_fd);
-        exit(EXIT_FAILURE);
-    }
 
-    if(fcntl(server_fd, F_SETFD, flags | FD_CLOEXEC) == -1)
-    {
-        perror("fcntl F_SETFD failed");
-        close(server_fd);
-        exit(EXIT_FAILURE);
-    }
     // Set up server address struct
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family      = AF_INET;
