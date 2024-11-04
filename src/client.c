@@ -1,18 +1,17 @@
 #include "parse_args.h"
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netinet/in.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <netinet/in.h>
+
 // #define SERVER_IP "127.0.0.1"    // Change to the server's IP if needed
 // #define PORT 8080                // Must match the server port
 

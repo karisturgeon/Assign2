@@ -1,18 +1,16 @@
 #include "process_request.h"
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <netinet/in.h>
-
 
 #define PORT 8080    // Server port
 #define BACKLOG 5    // Number of allowed pending connections#define BUFFER_SIZE 1024
@@ -23,6 +21,7 @@ int main(void)
     int                     client_fd;
     struct sockaddr_in      server_addr;
     struct sockaddr_storage client_addr;
+    int                     flags;
     struct sigaction        sa;    // Use sockaddr_storage for compatibility with IPv4 and IPv6
     socklen_t               client_addr_len = sizeof(client_addr);
 #if defined(__clang__)
@@ -40,19 +39,28 @@ int main(void)
     signal(SIGINT, signal_handler);
 
     // Create the server socket
-    #ifdef SOCK_CLOEXEC
-    server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    #else
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    // Set close-on-exec manually with fcntl as shown above
-    #endif
 
+    // server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if(server_fd < 0)
     {
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
+    flags = fcntl(server_fd, F_GETFD);
+    if(flags == -1)
+    {
+        perror("fcntl F_GETFD failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
 
+    if(fcntl(server_fd, F_SETFD, flags | FD_CLOEXEC) == -1)
+    {
+        perror("fcntl F_SETFD failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
     // Set up server address struct
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family      = AF_INET;
