@@ -38,11 +38,9 @@ int main(void)
     signal(SIGINT, signal_handler);
 
     // Create the server socket
-    #if defined(__FreeBSD__)
-    server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    #else
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    #endif
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0); // NOLINT(android-cloexec-socket)
+
     if(server_fd < 0)
     {
         perror("Socket creation failed");

@@ -33,7 +33,9 @@ int main(int argc, char *argv[])
     }
 
     // Create a TCP socket
-    sock_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    sock_fd = socket(AF_INET, SOCK_STREAM, 0); // NOLINT(android-cloexec-socket)
+
+
     if(sock_fd < 0)
     {
         perror("Socket creation failed");
