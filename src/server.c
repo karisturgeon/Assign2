@@ -21,7 +21,6 @@ int main(void)
     int                     client_fd;
     struct sockaddr_in      server_addr;
     struct sockaddr_storage client_addr;
-    int                     flags;
     struct sigaction        sa;    // Use sockaddr_storage for compatibility with IPv4 and IPv6
     socklen_t               client_addr_len = sizeof(client_addr);
 #if defined(__clang__)
