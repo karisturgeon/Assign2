@@ -100,7 +100,6 @@ int main(void)
             close(client_fd);    // Close the client socket in the parent
         }
     }
-
 }
 
 void signal_handler(int signal_number)

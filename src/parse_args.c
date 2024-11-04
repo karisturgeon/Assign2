@@ -5,11 +5,11 @@
 #include <string.h>
 #include <unistd.h>
 
-int parse_args(int argc, char *argv[], const char **input_message, const char **filter)
+int parse_args(int argc, char *argv[], const char **input_message, const char **filter, const char **server_ip, int *port)
 {
-    int opt;
-
-    while((opt = getopt(argc, argv, ":i:f:h")) != -1)
+    int   opt;
+    char *endptr = NULL;
+    while((opt = getopt(argc, argv, ":i:f:a:p:h")) != -1)
     {
         switch(opt)
         {
@@ -20,6 +20,17 @@ int parse_args(int argc, char *argv[], const char **input_message, const char **
                 *filter = optarg;
                 //                printf("Filter: %s\n", filter);
                 break;
+            case 'a':
+                *server_ip = optarg;
+                break;
+            case 'p':
+                *port = (int)strtol(optarg, &endptr, 0);    // Explicit cast to int
+                if(*endptr != '\0')
+                {
+                    // Handle error: optarg wasn't a valid number
+                }
+                break;
+
             case 'h':
                 usage(argv[0], EXIT_SUCCESS, NULL);
             case ':':    // Handle missing argument case (for options -i, -o, -f)
@@ -40,10 +51,23 @@ int parse_args(int argc, char *argv[], const char **input_message, const char **
         }
     }
 
-    if(*input_message == NULL || *filter == NULL)
+    if(*input_message == NULL)
     {
-        fprintf(stderr, "Error: Missing required arguments.\n");
+        fprintf(stderr, "Error: Missing required arguments (INPUT MESSAGE).\n");
         return EXIT_FAILURE;
+    }
+    if(*filter == NULL)
+    {
+        fprintf(stderr, "Error: Missing required arguments (FILTER).\n");
+        return EXIT_FAILURE;
+    }
+    if(*server_ip == NULL)
+    {
+        fprintf(stderr, "Error: Missing required arguments (SERVER IP ADDRESS).\n");
+    }
+    if(port == 0)
+    {
+        fprintf(stderr, "Error: Missing required arguments (PORT).\n");
     }
 
     if(strcmp(*filter, "upper") != 0 && strcmp(*filter, "lower") != 0 && strcmp(*filter, "null") != 0)

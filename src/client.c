@@ -6,20 +6,22 @@
 #include <string.h>
 #include <unistd.h>
 
-#define SERVER_IP "127.0.0.1"    // Change to the server's IP if needed
-#define PORT 8080                // Must match the server port
+// #define SERVER_IP "127.0.0.1"    // Change to the server's IP if needed
+// #define PORT 8080                // Must match the server port
 
 int main(int argc, char *argv[])
 {
     int                sock_fd;
     struct sockaddr_in server_addr;
+    const char        *server_ip     = NULL;
+    int                port          = 0;
     const char        *input_message = NULL;
     const char        *filter        = NULL;
     uint8_t            filter_size;
     uint8_t            message_size;
 
     // Parse command-line arguments
-    if(parse_args(argc, argv, &input_message, &filter) != EXIT_SUCCESS)
+    if(parse_args(argc, argv, &input_message, &filter, &server_ip, &port) != EXIT_SUCCESS)
     {
         exit(EXIT_FAILURE);
     }
@@ -35,9 +37,9 @@ int main(int argc, char *argv[])
     // Set up the server address struct
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port   = htons(PORT);
+    server_addr.sin_port   = htons((uint16_t)port);
 
-    if(inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0)
+    if(inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0)
     {
         perror("Invalid address or address not supported");
         close(sock_fd);
