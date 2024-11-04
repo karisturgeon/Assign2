@@ -1,30 +1,25 @@
-#include "server.h"
 #include "process_request.h"
-#include <fcntl.h>
-#include <pthread.h>
+#include <arpa/inet.h>
+#include <errno.h>
 #include <signal.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdnoreturn.h>
 #include <string.h>
-#include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 
-#define FIFO_FILE1 "./fifo1"
-#define FIFO_FILE2 "./fifo2"
+#define PORT 8080    // Server port
+#define BACKLOG 5    // Number of allowed pending connections#define BUFFER_SIZE 1024
 
 int main(void)
 {
-    printf("Starting server...\n");
-    server();
-}
-
-noreturn void server(void)
-{
-    pthread_t        thread;
-    const int        signals_to_handle[] = {SIGINT};
-    struct sigaction sa;
+    int                     server_fd;
+    int                     client_fd;
+    struct sockaddr_in      server_addr;
+    struct sockaddr_storage client_addr;
+    struct sigaction        sa;    // Use sockaddr_storage for compatibility with IPv4 and IPv6
+    socklen_t               client_addr_len = sizeof(client_addr);
 #if defined(__clang__)
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wdisabled-macro-expansion"
@@ -36,67 +31,83 @@ noreturn void server(void)
 #endif
 
     sigemptyset(&sa.sa_mask);
+    // Set up signal handling for graceful termination
+    signal(SIGINT, signal_handler);
 
-    for(size_t i = 0; i < sizeof(signals_to_handle) / sizeof(signals_to_handle[0]); i++)
+    // Create the server socket
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(server_fd < 0)
     {
-        if(sigaction(signals_to_handle[i], &sa, NULL) < 0)
-        {
-            printf("Failed to set signal handler for signal %d\n", signals_to_handle[i]);
-        }
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
     }
 
-    mkfifo(FIFO_FILE1, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    mkfifo(FIFO_FILE2, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    // Set up server address struct
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family      = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;    // Bind to any available interface
+    server_addr.sin_port        = htons(PORT);
+
+    // Bind the socket
+    if(bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("Bind failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for incoming connections
+    if(listen(server_fd, BACKLOG) < 0)
+    {
+        perror("Listen failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Server is listening on port %d...\n", PORT);
 
     while(1)
     {
-        int            fd1;
-        int            fd2;
-        client_data_t *client_data;
-        fd1 = open(FIFO_FILE1, O_RDONLY | O_CLOEXEC);
-        fd2 = open(FIFO_FILE2, O_WRONLY | O_CLOEXEC);
-
-        if(fd1 == -1)
+        pid_t pid;
+        int   client_fd_copy;
+        // Accept a client connection
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+        if(client_fd < 0)
         {
-            perror("Server: Error opening FIFO1");
-        }
-        if(fd2 == -1)
-        {
-            perror("Server: Error opening FIFO2");
-        }
-
-        client_data = (client_data_t *)malloc(sizeof(client_data_t));
-        if(client_data == NULL)
-        {
-            perror("Error allocating memory for client data");
-            close(fd1);
-            close(fd2);
+            perror("Accept failed");
             continue;
         }
-        client_data->fd1 = fd1;
-        client_data->fd2 = fd2;
 
-        if(pthread_create(&thread, NULL, process_request, (void *)client_data) != 0)
+        // Create a new process to handle the client
+
+        pid = fork();
+        if(pid < 0)
         {
-            perror("Error creating thread");
-            free(client_data);
-            close(fd1);
-            close(fd2);
-            continue;
+            perror("Fork failed");
+            close(client_fd);
         }
-        pthread_detach(thread);
+        else if(pid == 0)
+        {
+            // Child process
+            close(server_fd);                    // Close the listening socket in the child
+            client_fd_copy = client_fd;          // Create a local copy to pass as a pointer
+            process_request(&client_fd_copy);    // Handle client request
+            close(client_fd);
+            exit(EXIT_SUCCESS);
+        }
+        else
+        {
+            close(client_fd);    // Close the client socket in the parent
+        }
     }
-    unlink(FIFO_FILE1);
-    unlink(FIFO_FILE2);
+
 }
 
 void signal_handler(int signal_number)
 {
     if(signal_number == SIGINT)
     {
-        printf("\nServer: Terminating...\n");
-        unlink(FIFO_FILE1);
-        unlink(FIFO_FILE2);
-        exit(EXIT_SUCCESS);
+        // printf("\nServer: Terminating...\n");
+        _exit(EXIT_SUCCESS);
     }
 }

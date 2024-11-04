@@ -12,88 +12,92 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-_Noreturn void *process_request(void *arg)
+void *process_request(void *arg)
 {
-    client_data_t *client_data = (client_data_t *)arg;
-    int            fd1         = client_data->fd1;
-    int            fd2         = client_data->fd2;
+    int client_fd;
 
     uint8_t size;
     uint8_t filter_size;
+    char    filter_name[UINT8_MAX + 1];
+    char    word[UINT8_MAX + 1];
+    void (*filter_func)(char *) = NULL;
+    client_fd                   = *((int *)arg);
+    // free(arg);
 
     // Read filter size
-    if(read(fd1, &filter_size, sizeof(uint8_t)) > 0)
+    if(read(client_fd, &filter_size, sizeof(uint8_t)) <= 0)
     {
-        char filter_name[UINT8_MAX + 1];
-        void (*filter_func)(char *) = NULL;
-        //        printf("reading from client.... \n");
-        // Read filter name
-        if(read(fd1, filter_name, filter_size) != filter_size)
+        perror("Error reading filter size");
+        goto cleanup;
+    }
+
+    //        printf("reading from client.... \n");
+    // Read filter name
+    if(read(client_fd, filter_name, filter_size) != filter_size)
+    {
+        printf("Error reading filter name");
+        goto cleanup;
+    }
+    filter_name[filter_size] = '\0';
+    //            printf("filter name: %s\n", filter_name);
+    // Select the appropriate filter function
+    if(strcmp(filter_name, "upper") == 0)
+    {
+        filter_func = upper_filter;
+    }
+    else if(strcmp(filter_name, "lower") == 0)
+    {
+        filter_func = lower_filter;
+    }
+    else if(strcmp(filter_name, "null") == 0)
+    {
+        filter_func = null_filter_wrapper;
+    }
+    else
+    {
+        fprintf(stderr, "Unknown filter: %s\n", filter_name);
+        goto cleanup;
+    }
+
+    if(filter_func != NULL)
+    {
+        // Read message size
+        if(read(client_fd, &size, sizeof(uint8_t)) <= 0)
         {
-            printf("Error reading filter name");
+            perror("Error reading message size");
+            goto cleanup;
         }
-        else
+
+        // Read the actual message
+        if(read(client_fd, word, size) != size)
         {
-            filter_name[filter_size] = '\0';
-            //            printf("filter name: %s\n", filter_name);
-            // Select the appropriate filter function
-            if(strcmp(filter_name, "upper") == 0)
-            {
-                filter_func = upper_filter;
-            }
-            else if(strcmp(filter_name, "lower") == 0)
-            {
-                filter_func = lower_filter;
-            }
-            else if(strcmp(filter_name, "null") == 0)
-            {
-                filter_func = null_filter_wrapper;
-            }
-            else
-            {
-                fprintf(stderr, "Unknown filter: %s\n", filter_name);
-            }
+            perror("Error reading message");
+            goto cleanup;
+        }
 
-            if(filter_func != NULL)
-            {
-                // Read message size
-                if(read(fd1, &size, sizeof(uint8_t)) > 0)
-                {
-                    char word[UINT8_MAX + 1];
-
-                    // Read the actual message
-                    if(read(fd1, word, size) != size)
-                    {
-                        perror("Error reading message");
-                    }
-                    else
-                    {
-                        word[size] = '\0';
-                        printf("Word: %s, Filter: %s\n", word, filter_name);
-                        // Apply the filter function to each character
-                        for(int i = 0; i < size; i++)
-                        {
-                            filter_func(&word[i]);
-                        }
-                        printf("Transformed Word: %s\n", word);
-                        // Send back the transformed message
-                        if(write(fd2, &size, sizeof(uint8_t)) != sizeof(uint8_t) || write(fd2, word, size) != size)
-                        {
-                            perror("Error writing transformed message");
-                        }
-                    }
-                }
-            }
-            else
-            {
-                fprintf(stderr, "Error: No valid filter function was selected.\n");
-            }
+        word[size] = '\0';
+        printf("Word: %s, Filter: %s\n", word, filter_name);
+        // Apply the filter function to each character
+        for(int i = 0; i < size; i++)
+        {
+            filter_func(&word[i]);
+        }
+        printf("Transformed Word: %s\n", word);
+        // Send back the transformed message
+        if(write(client_fd, &size, sizeof(uint8_t)) != sizeof(uint8_t) || write(client_fd, word, size) != size)
+        {
+            perror("Error writing transformed message");
+            goto cleanup;
         }
     }
 
-    close(fd1);    // Close FIFO1 for this client
-    close(fd2);    // Close FIFO2 for this client
+    else
+    {
+        fprintf(stderr, "Error: No valid filter function was selected.\n");
+        goto cleanup;
+    }
 
-    free(client_data);     // Free the allocated memory for client data
-    pthread_exit(NULL);    // End the thread
+cleanup:
+    close(client_fd);    // Free the allocated memory for client data
+    return NULL;
 }

@@ -1,115 +1,107 @@
-
-
-#include "client.h"
-#include <fcntl.h>
-#include <parse_args.h>
+#include "parse_args.h"
+#include <arpa/inet.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#define FIFO_FILE1 "./fifo1"
-#define FIFO_FILE2 "./fifo2"
+#define SERVER_IP "127.0.0.1"    // Change to the server's IP if needed
+#define PORT 8080                // Must match the server port
 
 int main(int argc, char *argv[])
 {
-    return client(argc, argv);
-}
+    int                sock_fd;
+    struct sockaddr_in server_addr;
+    const char        *input_message = NULL;
+    const char        *filter        = NULL;
+    uint8_t            filter_size;
+    uint8_t            message_size;
 
-int client(int argc, char *argv[])
-{
-    int         fd1;
-    int         fd2;
-    uint8_t     size;
-    const char *input_message = NULL;
-    const char *filter        = NULL;
-    uint8_t     filter_size;
-
+    // Parse command-line arguments
     if(parse_args(argc, argv, &input_message, &filter) != EXIT_SUCCESS)
     {
-        // parse_args already prints error messages
-        exit(EXIT_FAILURE);
-    }
-    if(filter == NULL)
-    {
-        fprintf(stderr, "Error: Filter is NULL.\n");
         exit(EXIT_FAILURE);
     }
 
+    // Create a TCP socket
+    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(sock_fd < 0)
+    {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set up the server address struct
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port   = htons(PORT);
+
+    if(inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0)
+    {
+        perror("Invalid address or address not supported");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Connect to the server
+    if(connect(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("Connection to server failed");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    // Send the filter size and filter type
     filter_size = (uint8_t)strlen(filter);
-
-    // Open the FIFOs for writing
-    fd1 = open(FIFO_FILE1, O_WRONLY | O_CLOEXEC);
-    fd2 = open(FIFO_FILE2, O_RDONLY | O_CLOEXEC);
-
-    if(fd1 == -1)
+    if(write(sock_fd, &filter_size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
-        perror("Client: Error opening FIFO1");
-        goto cleanup;
+        perror("Error writing filter size to socket");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
     }
-    if(fd2 == -1)
+    if(write(sock_fd, filter, filter_size) != filter_size)
     {
-        perror("Client: Error opening FIFO2");
-        goto cleanup;
+        perror("Error writing filter to socket");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
     }
 
-    if(write(fd1, &filter_size, sizeof(uint8_t)) != sizeof(uint8_t))
+    // Send the input message size and message
+    message_size = (uint8_t)strlen(input_message);
+    if(write(sock_fd, &message_size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
-        perror("Error writing filter size to FIFO");
-        goto cleanup;
+        perror("Error writing message size to socket");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
     }
-    if(write(fd1, filter, filter_size) != filter_size)
+    if(write(sock_fd, input_message, message_size) != message_size)
     {
-        perror("Error writing filter to FIFO");
-        goto cleanup;
-    }
-    // Calculate the message size
-    size = (uint8_t)strlen(input_message);    // Size of the message (excluding null terminator)
-    if(size == 0)
-    {
-        printf("Cannot have empty input_message\n");
-        goto cleanup;
-    }
-    // Write the size of the message first
-    if(write(fd1, &size, sizeof(uint8_t)) != sizeof(uint8_t))
-    {
-        perror("Error writing size to FIFO");
-        goto cleanup;
+        perror("Error writing message to socket");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
     }
 
-    // Write the actual message to the FIFO
-    if(write(fd1, input_message, size) != size)    // Write the exact message size without the null terminator
+    // Read the transformed message size and content
+    if(read(sock_fd, &message_size, sizeof(uint8_t)) > 0)
     {
-        perror("Error writing message to FIFO");
-        goto cleanup;
-    }
-    if(read(fd2, &size, sizeof(uint8_t)) > 0)
-    {
-        char word[UINT8_MAX + 1];
-        if(read(fd2, word, size) != size)
+        char response[UINT8_MAX + 1];
+        if(read(sock_fd, response, message_size) != message_size)
         {
             perror("Error reading transformed message");
         }
         else
         {
-            if(strcmp(word, "Server is shutting down...\n") == 0)
-            {
-                printf("%sServer has shut down. Exiting...\n", word);
-                goto cleanup;
-            }
-            word[size] = '\0';
-            printf("\n%s\n", word);
+            response[message_size] = '\0';    // Null-terminate the string
+            printf("\nTransformed Message: %s\n", response);
         }
     }
-cleanup:
-    if(fd1 != -1)
+    else
     {
-        close(fd1);    // Close FIFO1 if it's open
+        perror("Error reading message size from server");
     }
-    if(fd2 != -1)
-    {
-        close(fd2);    // Close FIFO2 if it's open
-    }
+
+    // Clean up and close the socket
+    close(sock_fd);
     return 0;
 }

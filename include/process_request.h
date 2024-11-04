@@ -1,8 +1,8 @@
 
 #ifndef PROCESS_REQUEST_H
 #define PROCESS_REQUEST_H
-_Noreturn void *process_request(void *arg);
-void            signal_handler(int signal_number);
+void *process_request(void *arg);
+void  signal_handler(int signal_number);
 
 typedef struct
 {
