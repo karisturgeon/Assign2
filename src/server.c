@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <netinet/in.h>
+
 
 #define PORT 8080    // Server port
 #define BACKLOG 5    // Number of allowed pending connections#define BUFFER_SIZE 1024
