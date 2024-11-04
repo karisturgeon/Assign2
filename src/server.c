@@ -40,7 +40,13 @@ int main(void)
     signal(SIGINT, signal_handler);
 
     // Create the server socket
+    #ifdef SOCK_CLOEXEC
     server_fd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    #else
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    // Set close-on-exec manually with fcntl as shown above
+    #endif
+
     if(server_fd < 0)
     {
         perror("Socket creation failed");
