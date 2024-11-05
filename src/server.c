@@ -21,7 +21,7 @@ int main(void)
     int                     client_fd;
     struct sockaddr_in      server_addr;
     struct sockaddr_storage client_addr;
-    struct sigaction        sa;    // Use sockaddr_storage for compatibility with IPv4 and IPv6
+    struct sigaction        sa;
     socklen_t               client_addr_len = sizeof(client_addr);
 #if defined(__clang__)
     #pragma clang diagnostic push
@@ -34,20 +34,19 @@ int main(void)
 #endif
 
     sigemptyset(&sa.sa_mask);
-    // Set up signal handling for graceful termination
     signal(SIGINT, signal_handler);
 
     // Create the server socket
 
-    server_fd = socket(AF_INET, SOCK_STREAM, 0); // NOLINT(android-cloexec-socket)
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
 
     if(server_fd < 0)
     {
+        errno = 1;
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    // Set up server address struct
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family      = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;    // Bind to any available interface
@@ -56,6 +55,7 @@ int main(void)
     // Bind the socket
     if(bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
+        errno = 1;
         perror("Bind failed");
         close(server_fd);
         exit(EXIT_FAILURE);
@@ -64,6 +64,7 @@ int main(void)
     // Listen for incoming connections
     if(listen(server_fd, BACKLOG) < 0)
     {
+        errno = 1;
         perror("Listen failed");
         close(server_fd);
         exit(EXIT_FAILURE);
@@ -94,15 +95,15 @@ int main(void)
         else if(pid == 0)
         {
             // Child process
-            close(server_fd);                    // Close the listening socket in the child
-            client_fd_copy = client_fd;          // Create a local copy to pass as a pointer
-            process_request(&client_fd_copy);    // Handle client request
+            close(server_fd);
+            client_fd_copy = client_fd;
+            process_request(&client_fd_copy);
             close(client_fd);
             exit(EXIT_SUCCESS);
         }
         else
         {
-            close(client_fd);    // Close the client socket in the parent
+            close(client_fd);
         }
     }
 }
@@ -111,7 +112,6 @@ void signal_handler(int signal_number)
 {
     if(signal_number == SIGINT)
     {
-        // printf("\nServer: Terminating...\n");
         _exit(EXIT_SUCCESS);
     }
 }

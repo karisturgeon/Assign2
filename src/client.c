@@ -12,8 +12,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// #define SERVER_IP "127.0.0.1"    // Change to the server's IP if needed
-// #define PORT 8080                // Must match the server port
 
 int main(int argc, char *argv[])
 {
@@ -33,22 +31,22 @@ int main(int argc, char *argv[])
     }
 
     // Create a TCP socket
-    sock_fd = socket(AF_INET, SOCK_STREAM, 0); // NOLINT(android-cloexec-socket)
-
+    sock_fd = socket(AF_INET, SOCK_STREAM, 0);    // NOLINT(android-cloexec-socket)
 
     if(sock_fd < 0)
     {
+        errno = 1;
         perror("Socket creation failed");
         exit(EXIT_FAILURE);
     }
 
-    // Set up the server address struct
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port   = htons((uint16_t)port);
 
     if(inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0)
     {
+        errno = 1;
         perror("Invalid address or address not supported");
         close(sock_fd);
         exit(EXIT_FAILURE);
@@ -57,6 +55,7 @@ int main(int argc, char *argv[])
     // Connect to the server
     if(connect(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
+        errno = 1;
         perror("Connection to server failed");
         close(sock_fd);
         exit(EXIT_FAILURE);
@@ -66,12 +65,14 @@ int main(int argc, char *argv[])
     filter_size = (uint8_t)strlen(filter);
     if(write(sock_fd, &filter_size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
+        errno = 1;
         perror("Error writing filter size to socket");
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
     if(write(sock_fd, filter, filter_size) != filter_size)
     {
+        errno = 1;
         perror("Error writing filter to socket");
         close(sock_fd);
         exit(EXIT_FAILURE);
@@ -79,14 +80,23 @@ int main(int argc, char *argv[])
 
     // Send the input message size and message
     message_size = (uint8_t)strlen(input_message);
+    if(message_size == 0)
+    {
+        errno = 1;
+        perror("Message cannot be an empty string");
+        close(sock_fd);
+        exit(EXIT_FAILURE);
+    }
     if(write(sock_fd, &message_size, sizeof(uint8_t)) != sizeof(uint8_t))
     {
+        errno = 1;
         perror("Error writing message size to socket");
         close(sock_fd);
         exit(EXIT_FAILURE);
     }
     if(write(sock_fd, input_message, message_size) != message_size)
     {
+        errno = 1;
         perror("Error writing message to socket");
         close(sock_fd);
         exit(EXIT_FAILURE);
@@ -102,16 +112,16 @@ int main(int argc, char *argv[])
         }
         else
         {
-            response[message_size] = '\0';    // Null-terminate the string
+            response[message_size] = '\0';
             printf("\nTransformed Message: %s\n", response);
         }
     }
     else
     {
+        errno = 1;
         perror("Error reading message size from server");
     }
 
-    // Clean up and close the socket
     close(sock_fd);
     return 0;
 }

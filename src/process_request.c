@@ -2,6 +2,7 @@
 #include "lower_filter.h"
 #include "null_filter.h"
 #include "upper_filter.h"
+#include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <signal.h>
@@ -27,6 +28,7 @@ void *process_request(void *arg)
     // Read filter size
     if(read(client_fd, &filter_size, sizeof(uint8_t)) <= 0)
     {
+        errno = 1;
         perror("Error reading filter size");
         goto cleanup;
     }
@@ -64,6 +66,7 @@ void *process_request(void *arg)
         // Read message size
         if(read(client_fd, &size, sizeof(uint8_t)) <= 0)
         {
+            errno = 1;
             perror("Error reading message size");
             goto cleanup;
         }
@@ -71,6 +74,7 @@ void *process_request(void *arg)
         // Read the actual message
         if(read(client_fd, word, size) != size)
         {
+            errno = 1;
             perror("Error reading message");
             goto cleanup;
         }
